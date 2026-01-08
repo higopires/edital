@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>FocusEdital Mobile - Full</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React 18 -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: contain;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .safe-area-bottom {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(15px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
+
+        .android-ripple:active {
+            background-color: rgba(0, 0, 0, 0.05);
+            transition: background 0.1s;
+        }
+    </style>
+</head>
+<body class="bg-[#F8FAFC]">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const icons = {
+                Home: <><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22" /></>,
+                Book: <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20M4 19.5V3a1 1 0 0 1 1-1h15a1 1 0 0 1 1 1v19a1 1 0 0 1-1 1H6.5a1 1 0 0 1-1-1" />,
+                Target: <><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></>,
+                CheckCircle: <><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></>,
+                ChevronRight: <path d="m9 18 6-6-6-6" />,
+                ShieldCheck: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4"/>,
+                Square: <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>,
+                CheckSquare: <><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="m9 12 2 2 4-4"/></>,
+                BarChart: <><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></>,
+                BrainCircuit: <><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .52 8.218 3 3 0 1 0 5.141 1.764 3 3 0 1 0 5.712-2.125 4 4 0 0 0 2.526-5.77 4 4 0 0 0-.52-8.218 3 3 0 1 0-5.141-1.764z"/><path d="M9 13a4.5 4.5 0 0 0 3-4"/><path d="M12 13a4.5 4.5 0 0 1-3-4"/><path d="M9 14.8V17"/><path d="M12 14.8V17"/></>,
+            };
+
+            return (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                    {icons[name] || null}
+                </svg>
+            );
+        };
+
+        const STORAGE_KEY = 'focusedital_mobile_total_v2';
+
+        // DADOS INTEGRAIS (EXTRAÍDOS DO WEB APP ORIGINAL)
+        const INITIAL_DATA = {
+            AuditGov: [
+                { id: 'ag_4', item: '4', assunto: 'Normas de Auditoria (NBASP / ISSAIs)', dominio: 65, incidencia: 'Altíssima', estrategia: 'Leitura das Normas' },
+                { id: 'ag_52', item: '5.2', assunto: 'Materialidade, Risco e Relevância', dominio: 72, incidencia: 'Altíssima', estrategia: 'Fine-tuning Técnico' },
+                { id: 'ag_53', item: '5.3', assunto: 'Amostragem Estatística em Auditoria', dominio: 64, incidencia: 'Alta', estrategia: 'Assunto -> Questões' },
+                { id: 'ag_63', item: '6.3', assunto: 'Testes de Auditoria (Substantivos/Observância)', dominio: 53, incidencia: 'Altíssima', estrategia: 'Assunto -> Questões' },
+                { id: 'ag_7', item: '7', assunto: 'Evidências e Matriz de Achados', dominio: 71, incidencia: 'CRÍTICA', estrategia: 'Foco na Escrita/P3' },
+                { id: 'ag_13', item: '1-3', assunto: 'Conceitos, Instrumentos e Tipos', dominio: 80, incidencia: 'Média', estrategia: 'Direto Questões' },
+                { id: 'ag_51', item: '5.1', assunto: 'Planejamento e Determinação de Escopo', dominio: 75, incidencia: 'Alta', estrategia: 'Direto Questões' },
+                { id: 'ag_8', item: '8', assunto: 'Comunicação (Relatórios de Auditoria)', dominio: 70, incidencia: 'Média', estrategia: 'Direto Questões' },
+            ],
+            ContExt: [
+                { id: 'ce_4', item: '4', assunto: 'Controle pelos Tribunais de Contas (Teoria)', dominio: 70, incidencia: 'Altíssima', estrategia: 'Estratégia 2' },
+                { id: 'ce_6', item: '6', assunto: 'Lei nº 8.429/1992 (LIA atualizada)', dominio: 81, incidencia: 'Altíssima', estrategia: 'Estratégia 2' },
+                { id: 'ce_9', item: '9', assunto: 'Controle da atividade financeira do Estado', dominio: 75, incidencia: 'Alta', estrategia: 'Estratégia 2' },
+                { id: 'ce_10', item: '10', assunto: 'TCU (Lei Orgânica + RI)', dominio: 63, incidencia: 'CRÍTICA', estrategia: 'Estratégia 2' },
+                { id: 'ce_tce', item: '--', assunto: 'Tomada de Contas Especial (TCE)', dominio: 68, incidencia: 'Altíssima', estrategia: 'Estratégia 2' },
+                { id: 'ce_13', item: '1-3', assunto: 'Conceito, Tipos e Controle Parlamentar', dominio: 82, incidencia: 'Média', estrategia: 'Estratégia 1' },
+                { id: 'ce_5', item: '5', assunto: 'Controle Administrativo (Autocontrole)', dominio: 78, incidencia: 'Média', estrategia: 'Estratégia 1' },
+                { id: 'ce_78', item: '7-8', assunto: 'Sistemas de Jurisdição e Controle Judicial', dominio: 72, incidencia: 'Média', estrategia: 'Estratégia 1' },
+            ],
+            DirAdm: [
+                { id: 'da_3', item: '3', assunto: 'Ato Administrativo (Extinção e Sanatória)', dominio: 70, incidencia: 'Altíssima', estrategia: 'Passo + Doutrina' },
+                { id: 'da_4', item: '4', assunto: 'Agentes Públicos (Lei 8.112/90)', dominio: 75, incidencia: 'Altíssima', estrategia: 'Passo + Lei Seca' },
+                { id: 'da_10', item: '10', assunto: 'Controle da Adm. / Improbidade (Lei 8.429)', dominio: 81, incidencia: 'Alta', estrategia: 'Refinar Alterações' },
+                { id: 'da_11', item: '11', assunto: 'Processo Administrativo (Lei 9.784/99)', dominio: 43, incidencia: 'Alta', estrategia: 'Teoria Profunda' },
+                { id: 'da_12', item: '12', assunto: 'Licitações e Contratos (Lei 14.133/21)', dominio: 55, incidencia: 'CRÍTICA', estrategia: 'Teoria Profunda' },
+                { id: 'da_low', item: '1-2', assunto: 'Estado, Governo e Fontes', dominio: 78, incidencia: 'Baixa', estrategia: 'Questões' },
+                { id: 'da_56', item: '5-6', assunto: 'Poderes e Regime Jurídico', dominio: 76, incidencia: 'Média', estrategia: 'Questões' },
+                { id: 'da_7', item: '7', assunto: 'Responsabilidade Civil do Estado', dominio: 72, incidencia: 'Média', estrategia: 'Questões' },
+            ],
+            DirCon: [
+                { id: 'dc_6', item: '6', assunto: 'Administração Pública (Arts. 37 a 41)', dominio: 79, incidencia: 'Altíssima', estrategia: 'Passo + Lei Seca' },
+                { id: 'dc_72', item: '7.2', assunto: 'Poder Legislativo e Processo Legislativo', dominio: 54, incidencia: 'Altíssima', estrategia: 'Estratégia 2' },
+                { id: 'dc_74', item: '7.4', assunto: 'Poder Judiciário', dominio: 55, incidencia: 'Alta', estrategia: 'Estratégia 2' },
+                { id: 'dc_8', item: '8', assunto: 'Funções essenciais (MPTCU focado)', dominio: 55, incidencia: 'Alta', estrategia: 'Estratégia 2' },
+                { id: 'dc_9', item: '9', assunto: 'Controle de Constitucionalidade', dominio: 46, incidencia: 'CRÍTICA', estrategia: 'Teoria Profunda' },
+                { id: 'dc_12', item: '12', assunto: 'Finanças Públicas (Orçamentos)', dominio: 70, incidencia: 'Altíssima', estrategia: 'Garantir Passo' },
+                { id: 'dc_fund', item: '1-4', assunto: 'Teoria e Direitos Fundamentais', dominio: 82, incidencia: 'Média', estrategia: 'Questões' },
+                { id: 'dc_est', item: '5', assunto: 'Organização do Estado', dominio: 79, incidencia: 'Alta', estrategia: 'Questões' },
+            ]
+        };
+
+        const PASSO_DATA = {
+            AuditGov: [
+                { id: 'p_ag_d', aula: 'Demo', assunto: 'Auditoria governamental: tipos e formas. Regularidade e Operacional.' },
+                { id: 'p_ag_1', aula: '01', assunto: 'Instrumentos de fiscalização: auditoria, levantamento, monitoramento, inspeção. Escopo e Achados.' },
+                { id: 'p_ag_2', aula: '02', assunto: 'Comunicação dos resultados: relatórios de auditoria.' },
+                { id: 'p_ag_3', aula: '03', assunto: 'Normas relativas à opinião do Auditor Governamental.' },
+                { id: 'p_ag_4', aula: '04', assunto: 'Testes e procedimentos do Auditor Governamental.' },
+                { id: 'p_ag_5', aula: '05', assunto: 'Normas da INTOSAI.' },
+                { id: 'p_ag_6', aula: '06', assunto: 'Simulado 1.' },
+                { id: 'p_ag_7', aula: '07', assunto: 'NBASP 100, 200, 300 e 400 - Princípios Fundamentais.' },
+                { id: 'p_ag_8', aula: '08', assunto: 'NBASP 4000, 3000, 3910 e 3920 - Normas Específicas.' },
+                { id: 'p_ag_9', aula: '09', assunto: 'NBASP 130, 140 e 9020 - Ética, Qualidade e Políticas Públicas.' },
+                { id: 'p_ag_10', aula: '10', assunto: 'Controle interno. Exame e avaliação.' },
+                { id: 'p_ag_11', aula: '11', assunto: 'Simulado 2.' },
+                { id: 'p_ag_12', aula: '12', assunto: 'Conceitos iniciais de auditoria.' },
+                { id: 'p_ag_13', aula: '13', assunto: 'Planejamento, Papéis de Trabalho e Documentação.' },
+                { id: 'p_ag_14', aula: '14', assunto: 'Amostragem de Auditoria. Supervisão e controle de qualidade.' },
+                { id: 'p_ag_15', aula: '15', assunto: 'Simulado 3' },
+                { id: 'p_ag_16', aula: '16', assunto: 'Evidências de auditoria.' },
+                { id: 'p_ag_17', aula: '17', assunto: 'Procedimentos e testes de auditoria.' },
+                { id: 'p_ag_18', aula: '18', assunto: 'Materialidades, risco e relevância. Fraude e Erro.' },
+                { id: 'p_ag_19', aula: '19', assunto: 'Simulado 4' }
+            ],
+            ContExt: [
+                { id: 'p_ce_d', aula: 'Demo', assunto: 'Noções Gerais de Sistemas de Controle. Entidades Fiscalizadoras Superiores' },
+                { id: 'p_ce_1', aula: '01', assunto: 'Tribunais de Contas: Natureza Jurídica, composição e funções.' },
+                { id: 'p_ce_2', aula: '02', assunto: 'Competências constitucionais dos Tribunais de Contas.' },
+                { id: 'p_ce_3', aula: '03', assunto: 'Simulado' },
+                { id: 'p_ce_4', aula: '04', assunto: 'TCU: Jurisdição e competências infraconstitucionais.' },
+                { id: 'p_ce_5', aula: '05', assunto: 'TCU: Organização.' },
+                { id: 'p_ce_6', aula: '06', assunto: 'Lei nº 8.429/92 (Lei de Improbidade Administrativa).' },
+                { id: 'p_ce_7', aula: '07', assunto: 'Simulado' }
+            ],
+            DirAdm: [
+                { id: 'p_da_d', aula: 'Demo', assunto: 'Regime jurídico-administrativo. Princípios expressos e implícitos.' },
+                { id: 'p_da_1', aula: '01', assunto: 'Organização administrativa. Centralização, descentralização, etc.' },
+                { id: 'p_da_2', aula: '02', assunto: 'Administração direta e indireta (Parte 2).' },
+                { id: 'p_da_3', aula: '03', assunto: 'Estado, governo e administração pública.' },
+                { id: 'p_da_4', aula: '04', assunto: 'Direito administrativo. Conceito, objeto e fontes.' },
+                { id: 'p_da_5', aula: '05', assunto: 'Simulado' },
+                { id: 'p_da_6', aula: '06', assunto: 'Ato administrativo. Conceito, requisitos, extinção.' },
+                { id: 'p_da_7', aula: '07', assunto: 'Agentes públicos.' },
+                { id: 'p_da_8', aula: '08', assunto: 'Lei nº 8.112/1990.' },
+                { id: 'p_da_9', aula: '09', assunto: 'Poderes da administração pública.' },
+                { id: 'p_da_10', aula: '10', assunto: 'Simulado' },
+                { id: 'p_da_11', aula: '11', assunto: 'Responsabilidade civil do Estado.' },
+                { id: 'p_da_12', aula: '12', assunto: 'Serviços públicos e Delegação.' },
+                { id: 'p_da_13', aula: '13', assunto: 'Entidades paraestatais e terceiro setor.' },
+                { id: 'p_da_14', aula: '14', assunto: 'Controle da administração pública.' },
+                { id: 'p_da_15', aula: '15', assunto: 'Simulado' },
+                { id: 'p_da_16', aula: '16', assunto: 'Improbidade administrativa: Lei nº 8.429/1992.' },
+                { id: 'p_da_17', aula: '17', assunto: 'Processo administrativo. Lei nº 9.784/1999.' },
+                { id: 'p_da_18', aula: '18', assunto: 'Licitações e contratos: Lei nº 14.133/2021 (Parte 1).' },
+                { id: 'p_da_19', aula: '19', assunto: 'Licitações e contratos: Lei nº 14.133/2021 (Parte 2).' },
+                { id: 'p_da_20', aula: '20', assunto: 'Licitações e contratos: Lei nº 14.133/2021 (Parte 3).' },
+                { id: 'p_da_21', aula: '21', assunto: 'Simulado' },
+                { id: 'p_da_e1', aula: 'Extra 1', assunto: 'Revisão e Questões Estratégicas' },
+                { id: 'p_da_e2', aula: 'Extra 2', assunto: 'Caderno de Jurisprudência' }
+            ],
+            DirCon: [
+                { id: 'p_dc_d', aula: 'Demo', assunto: 'Princípios fundamentais.' },
+                { id: 'p_dc_1', aula: '01', assunto: 'Direitos e garantias fundamentais (Parte 1).' },
+                { id: 'p_dc_2', aula: '02', assunto: 'Direitos e garantias fundamentais (Parte 2).' },
+                { id: 'p_dc_3', aula: '03', assunto: 'Direitos e garantias fundamentais (Parte 3).' },
+                { id: 'p_dc_4', aula: '04', assunto: 'Constituição. Conceito, objeto e classificações.' },
+                { id: 'p_dc_5', aula: '05', assunto: 'Aplicabilidade e interpretação das normas.' },
+                { id: 'p_dc_6', aula: '06', assunto: 'Simulado' },
+                { id: 'p_dc_7', aula: '07', assunto: 'Poder constituinte originário e derivado.' },
+                { id: 'p_dc_8', aula: '08', assunto: 'Direitos sociais.' },
+                { id: 'p_dc_9', aula: '09', assunto: 'Direitos políticos.' },
+                { id: 'p_dc_10', aula: '10', assunto: 'Partidos políticos.' },
+                { id: 'p_dc_11', aula: '11', assunto: 'Simulado.' },
+                { id: 'p_dc_12', aula: '12', assunto: 'Organização do Estado e Intervenção.' },
+                { id: 'p_dc_13', aula: '13', assunto: 'Administração pública e Servidores.' },
+                { id: 'p_dc_14', aula: '14', assunto: 'Poder Legislativo.' },
+                { id: 'p_dc_15', aula: '15', assunto: 'Poder Executivo.' },
+                { id: 'p_dc_16', aula: '16', assunto: 'Simulado' },
+                { id: 'p_dc_17', aula: '17', assunto: 'Poder Judiciário.' },
+                { id: 'p_dc_18', aula: '18', assunto: 'Funções essenciais à justiça (MP, etc).' },
+                { id: 'p_dc_19', aula: '19', assunto: 'Controle de constitucionalidade.' },
+                { id: 'p_dc_20', aula: '20', assunto: 'Defesa do Estado e instituições.' },
+                { id: 'p_dc_21', aula: '21', assunto: 'Simulado' },
+                { id: 'p_dc_22', aula: '22', assunto: 'Sistema Tributário Nacional.' },
+                { id: 'p_dc_23', aula: '23', assunto: 'Finanças Públicas.' },
+                { id: 'p_dc_24', aula: '24', assunto: 'Ordem Econômica e Financeira.' },
+                { id: 'p_dc_25', aula: '25', assunto: 'Ordem Social.' },
+                { id: 'p_dc_26', aula: '26', assunto: 'Simulado' },
+                { id: 'p_dc_e1', aula: 'Extra 1', assunto: 'Revisão e Questões Estratégicas' },
+                { id: 'p_dc_e2', aula: 'Extra 2', assunto: 'Caderno de Jurisprudência' }
+            ]
+        };
+
+        const INCIDENCE_RANK = { 'CRÍTICA': 5, 'Altíssima': 4, 'Alta': 3, 'Média': 2, 'Baixa': 1 };
+        const SUBJECT_NAMES = { AuditGov: 'Auditoria', ContExt: 'Controle', DirAdm: 'Adm.', DirCon: 'Const.' };
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('home');
+            const [selectedSubject, setSelectedSubject] = useState('AuditGov');
+            const [completedItems, setCompletedItems] = useState([]);
+
+            useEffect(() => {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    try { setCompletedItems(JSON.parse(saved)); } catch (e) { console.error(e); }
+                }
+            }, []);
+
+            const toggleComplete = (id) => {
+                const newItems = completedItems.includes(id) ? completedItems.filter(i => i !== id) : [...completedItems, id];
+                setCompletedItems(newItems);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
+            };
+
+            const calculatePriority = (item) => {
+                const incValue = INCIDENCE_RANK[item.incidencia] || 0;
+                return (incValue * 20) + (100 - item.dominio);
+            };
+
+            const stats = useMemo(() => {
+                const allEdital = Object.values(INITIAL_DATA).flat();
+                const allPasso = Object.values(PASSO_DATA).flat();
+                const total = allEdital.length + allPasso.length;
+                const done = completedItems.length;
+                
+                const editalDone = allEdital.filter(i => completedItems.includes(i.id)).length;
+                const passoDone = allPasso.filter(i => completedItems.includes(i.id)).length;
+
+                return { 
+                    total, done, 
+                    pct: Math.round((done / total) * 100) || 0,
+                    editalPct: Math.round((editalDone / allEdital.length) * 100) || 0,
+                    passoPct: Math.round((passoDone / allPasso.length) * 100) || 0,
+                    editalCount: `${editalDone}/${allEdital.length}`,
+                    passoCount: `${passoDone}/${allPasso.length}`
+                };
+            }, [completedItems]);
+
+            const priorityRadar = useMemo(() => {
+                return Object.keys(INITIAL_DATA).flatMap(subject => 
+                    INITIAL_DATA[subject].map(topic => ({ ...topic, subject }))
+                )
+                .filter(t => !completedItems.includes(t.id))
+                .sort((a, b) => calculatePriority(b) - calculatePriority(a))
+                .slice(0, 5);
+            }, [completedItems]);
+
+            const getIncidenceColor = (inc) => {
+                const colors = {
+                    'CRÍTICA': 'bg-red-500 text-white',
+                    'Altíssima': 'bg-orange-500 text-white',
+                    'Alta': 'bg-yellow-500 text-white',
+                    'Média': 'bg-blue-500 text-white',
+                    'Baixa': 'bg-gray-400 text-white'
+                };
+                return colors[inc] || 'bg-gray-200';
+            };
+
+            return (
+                <div className="flex flex-col min-h-screen bg-[#F8FAFC]">
+                    {/* Header Compacto */}
+                    <div className="bg-white px-6 py-4 sticky top-0 z-50 flex items-center justify-between border-b border-slate-100">
+                        <div className="flex items-center gap-2">
+                            <div className="bg-indigo-600 p-1.5 rounded-lg text-white">
+                                <Icon name="ShieldCheck" size={18} />
+                            </div>
+                            <span className="font-black text-slate-800 tracking-tight">FocusEdital <span className="text-indigo-600">Pro</span></span>
+                        </div>
+                        <div className="flex items-center gap-1 bg-slate-100 px-3 py-1 rounded-full">
+                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                            <span className="text-[10px] font-black text-slate-500 uppercase">Online</span>
+                        </div>
+                    </div>
+
+                    <main className="flex-1 pb-24 px-4 overflow-y-auto">
+                        {activeTab === 'home' ? (
+                            <div className="animate-slide-up space-y-8 pt-6">
+                                {/* Resumo de Progresso */}
+                                <section className="grid grid-cols-2 gap-3">
+                                    <div className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Edital</p>
+                                        <div className="text-3xl font-black text-slate-800">{stats.editalPct}%</div>
+                                        <div className="text-[10px] font-bold text-slate-400 mt-1">{stats.editalCount} itens</div>
+                                        <div className="mt-3 bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                            <div className="bg-indigo-500 h-full" style={{width: `${stats.editalPct}%`}}></div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-slate-900 p-5 rounded-[2rem] text-white shadow-xl shadow-slate-200">
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Passo</p>
+                                        <div className="text-3xl font-black">{stats.passoPct}%</div>
+                                        <div className="text-[10px] font-bold text-slate-500 mt-1">{stats.passoCount} aulas</div>
+                                        <div className="mt-3 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                            <div className="bg-indigo-400 h-full" style={{width: `${stats.passoPct}%`}}></div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                {/* Radar de Prioridades */}
+                                <section>
+                                    <div className="flex items-center justify-between mb-4 px-2">
+                                        <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                                            <Icon name="BrainCircuit" size={20} className="text-indigo-600" /> Radar de Foco
+                                        </h2>
+                                        <span className="text-[10px] font-black text-indigo-600 uppercase">Top 5 Urgentes</span>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {priorityRadar.map(item => (
+                                            <div key={item.id} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between android-ripple">
+                                                <div className="flex-1 mr-4 space-y-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${getIncidenceColor(item.incidencia)}`}>{item.incidencia}</span>
+                                                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{SUBJECT_NAMES[item.subject]}</span>
+                                                    </div>
+                                                    <h3 className="text-sm font-bold text-slate-800 leading-tight">{item.assunto}</h3>
+                                                </div>
+                                                <button onClick={() => toggleComplete(item.id)} className="p-3 bg-slate-50 text-slate-200 rounded-2xl active:scale-90 transition-all">
+                                                    <Icon name="Square" size={26} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            </div>
+                        ) : (
+                            <div className="animate-slide-up space-y-6 pt-6">
+                                <div className="px-2">
+                                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">Matérias</h1>
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Selecione o domínio para ver tudo</p>
+                                </div>
+                                
+                                {/* Seletor de Matéria (Horizontal Scroll) */}
+                                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 px-1">
+                                    {Object.keys(SUBJECT_NAMES).map(key => (
+                                        <button 
+                                            key={key} 
+                                            onClick={() => setSelectedSubject(key)}
+                                            className={`flex-none px-6 py-3 rounded-2xl text-[10px] font-black uppercase transition-all border ${selectedSubject === key ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100' : 'bg-white text-slate-400 border-slate-100'}`}
+                                        >
+                                            {SUBJECT_NAMES[key]}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Conteúdo da Matéria */}
+                                <div className="space-y-10">
+                                    {/* Panorama Edital */}
+                                    <section>
+                                        <div className="flex items-center gap-2 mb-4 px-2">
+                                            <Icon name="Target" size={18} className="text-rose-500" />
+                                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Edital Completo</h3>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {INITIAL_DATA[selectedSubject].map(item => (
+                                                <div key={item.id} className={`bg-white p-5 rounded-[2.2rem] border transition-all ${completedItems.includes(item.id) ? 'bg-slate-50 border-emerald-100' : 'border-slate-100 shadow-sm'}`}>
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="flex-1 space-y-1 pr-4">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[10px] font-black text-slate-300">Item {item.item}</span>
+                                                                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${getIncidenceColor(item.incidencia)}`}>{item.incidencia}</span>
+                                                            </div>
+                                                            <h4 className={`text-[15px] font-bold leading-snug ${completedItems.includes(item.id) ? 'line-through text-slate-400' : 'text-slate-800'}`}>{item.assunto}</h4>
+                                                            <p className="text-[10px] font-bold text-slate-400 italic">Estratégia: {item.estrategia}</p>
+                                                        </div>
+                                                        <button onClick={() => toggleComplete(item.id)} className={`p-2 transition-all ${completedItems.includes(item.id) ? 'text-emerald-500' : 'text-slate-200'}`}>
+                                                            <Icon name={completedItems.includes(item.id) ? "CheckSquare" : "Square"} size={28} />
+                                                        </button>
+                                                    </div>
+                                                    <div className="mt-4 flex items-center gap-3">
+                                                        <div className="flex-1 bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                                            <div className={`h-full rounded-full ${item.dominio > 70 ? 'bg-emerald-500' : 'bg-indigo-500'}`} style={{width: `${item.dominio}%`}}></div>
+                                                        </div>
+                                                        <span className="text-[10px] font-black text-slate-800">{item.dominio}%</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </section>
+
+                                    {/* Passo Estratégico */}
+                                    <section className="pb-8">
+                                        <div className="flex items-center gap-2 mb-4 px-2">
+                                            <Icon name="Book" size={18} className="text-indigo-500" />
+                                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Passo Estratégico</h3>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {PASSO_DATA[selectedSubject].map(aula => (
+                                                <div 
+                                                    key={aula.id} 
+                                                    onClick={() => toggleComplete(aula.id)}
+                                                    className={`p-4 rounded-3xl border flex items-center gap-4 transition-all android-ripple ${completedItems.includes(aula.id) ? 'bg-emerald-50 border-emerald-100' : 'bg-white border-slate-100 shadow-sm'}`}
+                                                >
+                                                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ${completedItems.includes(aula.id) ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                                                        <span className="text-[10px] font-black uppercase leading-none">{aula.aula}</span>
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className={`text-[13px] font-bold leading-tight ${completedItems.includes(aula.id) ? 'text-emerald-900 line-through opacity-60' : 'text-slate-700'}`}>{aula.assunto}</p>
+                                                    </div>
+                                                    <div className={`flex-shrink-0 ${completedItems.includes(aula.id) ? 'text-emerald-500' : 'text-slate-200'}`}>
+                                                        <Icon name={completedItems.includes(aula.id) ? "CheckCircle" : "ChevronRight"} size={16} />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </section>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+
+                    {/* Barra de Navegação Inferior (Estilo Android) */}
+                    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 safe-area-bottom z-50">
+                        <div className="flex justify-around items-center h-16 relative">
+                            <button 
+                                onClick={() => setActiveTab('home')}
+                                className={`flex flex-col items-center gap-1 w-full transition-all ${activeTab === 'home' ? 'text-indigo-600' : 'text-slate-300'}`}
+                            >
+                                <Icon name="Home" size={24} />
+                                <span className="text-[10px] font-black uppercase tracking-tighter">Início</span>
+                                {activeTab === 'home' && <div className="absolute top-0 w-10 h-1 bg-indigo-600 rounded-b-full"></div>}
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('materias')}
+                                className={`flex flex-col items-center gap-1 w-full transition-all ${activeTab === 'materias' ? 'text-indigo-600' : 'text-slate-300'}`}
+                            >
+                                <Icon name="Book" size={24} />
+                                <span className="text-[10px] font-black uppercase tracking-tighter">Matérias</span>
+                                {activeTab === 'materias' && <div className="absolute top-0 w-10 h-1 bg-indigo-600 rounded-b-full"></div>}
+                            </button>
+                            <button className="flex flex-col items-center gap-1 w-full text-slate-300 opacity-40">
+                                <Icon name="BarChart" size={24} />
+                                <span className="text-[10px] font-black uppercase tracking-tighter">Desempenho</span>
+                            </button>
+                        </div>
+                    </nav>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
